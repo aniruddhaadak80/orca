@@ -228,9 +228,9 @@ module.exports = {
     'node_modules/zod/**',
     'node_modules/yaml/**'
   ],
-  artifactBuildCompleted: ({ file }) => {
+  artifactBuildCompleted: ({ file, arch }) => {
     if (file.endsWith('.AppImage')) {
-      verifyStaticAppImagePackage(file)
+      verifyStaticAppImagePackage(file, arch)
     }
   },
   afterPack: async (context) => {
