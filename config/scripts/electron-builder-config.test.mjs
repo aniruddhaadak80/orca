@@ -1,4 +1,4 @@
-import { readFile } from 'node:fs/promises'
+import { chmod, readFile } from 'node:fs/promises'
 import { createRequire } from 'node:module'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
@@ -285,6 +285,7 @@ describe('electron-builder config', () => {
     try {
       const appImage = join(root, 'orca-linux.AppImage')
       await writeFile(appImage, 'not an ELF')
+      await chmod(appImage, 0o755)
 
       expect(() =>
         electronBuilderConfig.artifactBuildCompleted({ file: appImage, arch: 1 })
