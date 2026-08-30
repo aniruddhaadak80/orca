@@ -408,5 +408,17 @@ describe('electron-builder config', () => {
         expect(source).toContain(`value === '${target}'`)
       }
     })
+
+    it('keeps the pinned FpmTarget overwrite for configured deb and rpm artifacts', async () => {
+      const source = await readFile(
+        require.resolve('app-builder-lib/out/targets/FpmTarget'),
+        'utf8'
+      )
+
+      expect(source).toContain('path.join(resourceDir, "package-type"), target')
+      for (const target of RECOVERABLE_TARGETS) {
+        expect(electronBuilderConfig[target]).toBeDefined()
+      }
+    })
   })
 })
