@@ -496,7 +496,8 @@ module.exports = {
       },
       featureWallResources
     ],
-    target: ['AppImage', 'deb'],
+    // Keep local artifacts aligned with the release pipeline.
+    target: ['AppImage', 'deb', 'rpm'],
     maintainer: 'stablyai',
     category: 'Utility'
   },
