@@ -10,6 +10,8 @@ export type DiffSection = {
   oldPath?: string
   added?: number
   removed?: number
+  // Mirrors GitStatusEntry.binary: absent counts explained by binary content.
+  binary?: boolean
   originalContent: string
   modifiedContent: string
   collapsed: boolean

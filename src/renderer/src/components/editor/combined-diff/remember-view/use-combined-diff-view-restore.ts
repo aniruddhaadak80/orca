@@ -136,10 +136,11 @@ export function useCombinedDiffViewRestore({
     latestDomScrollAnchorRef.current = scrollAnchorRef.current
     setSections(
       entries.map((entry) => {
+        const binary = 'binary' in entry ? entry.binary : undefined
         const loadOnDemand = shouldLoadCombinedDiffOnDemand({
           added: 'added' in entry ? entry.added : undefined,
           removed: 'removed' in entry ? entry.removed : undefined,
-          area: 'area' in entry ? entry.area : undefined,
+          binary,
           path: entry.path
         })
         return {
@@ -150,6 +151,7 @@ export function useCombinedDiffViewRestore({
           oldPath: entry.oldPath,
           added: 'added' in entry ? entry.added : undefined,
           removed: 'removed' in entry ? entry.removed : undefined,
+          binary,
           originalContent: '',
           modifiedContent: '',
           collapsed: combinedDiffViewPreferences.collapsed ?? false,

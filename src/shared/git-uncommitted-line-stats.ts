@@ -6,7 +6,9 @@ import { DEFAULT_GIT_STATUS_LIMIT } from './git-status-limit'
 import { iterateNulDelimitedFields } from './nul-delimited-fields'
 import { readNodeFileWithinLimit } from './node-bounded-file-reader'
 
-export type GitLineStats = { added?: number; removed?: number }
+// `binary` marks content git (or the untracked scan) reports as binary, which is
+// why the counts are absent — distinct from counts that were never computed.
+export type GitLineStats = { added?: number; removed?: number; binary?: boolean }
 
 // Limits how many untracked files we read at once when counting their lines,
 // so a worktree with thousands of new files cannot exhaust file descriptors.
@@ -41,6 +43,14 @@ function parseNumstatCount(value: string): number | undefined {
   return Number.isFinite(count) ? count : undefined
 }
 
+function toNumstatLineStats(rawAdded: string, rawRemoved: string): GitLineStats {
+  const added = parseNumstatCount(rawAdded)
+  const removed = parseNumstatCount(rawRemoved)
+  return rawAdded === '-' && rawRemoved === '-'
+    ? { added, removed, binary: true }
+    : { added, removed }
+}
+
 // `git diff -M` reports renames in the numstat path column as `old => new` or
 // `dir/{old => new}/file`; normalize to the post-rename path so it keys to the
 // porcelain status entry, which always reports the new path.
@@ -70,10 +80,7 @@ export function parseNumstat(stdout: string): Map<string, GitLineStats> {
     if (!rawPath) {
       continue
     }
-    stats.set(normalizeNumstatPath(rawPath), {
-      added: parseNumstatCount(parts[0] ?? ''),
-      removed: parseNumstatCount(parts[1] ?? '')
-    })
+    stats.set(normalizeNumstatPath(rawPath), toNumstatLineStats(parts[0] ?? '', parts[1] ?? ''))
   }
   return stats
 }
@@ -98,10 +105,7 @@ function parseNulDelimitedNumstat(stdout: string): Map<string, GitLineStats> {
     if (!path) {
       continue
     }
-    stats.set(path, {
-      added: parseNumstatCount(parts[0] ?? ''),
-      removed: parseNumstatCount(parts[1] ?? '')
-    })
+    stats.set(path, toNumstatLineStats(parts[0] ?? '', parts[1] ?? ''))
   }
   return stats
 }
@@ -131,7 +135,7 @@ async function countFileAdditions(absolutePath: string): Promise<GitLineStats> {
     }
     const { buffer } = await readNodeFileWithinLimit(absolutePath, MAX_UNTRACKED_LINE_COUNT_BYTES)
     if (isBinaryBuffer(buffer)) {
-      return rememberUntrackedStats(absolutePath, fileStat, {})
+      return rememberUntrackedStats(absolutePath, fileStat, { binary: true })
     }
     if (buffer.length === 0) {
       return rememberUntrackedStats(absolutePath, fileStat, { added: 0 })
@@ -211,11 +215,14 @@ export async function collectUntrackedAdditions(
 }
 
 export function applyLineStats(
-  entry: { added?: number; removed?: number },
+  entry: { added?: number; removed?: number; binary?: boolean },
   stats: GitLineStats | undefined
 ): void {
   if (!stats) {
     return
+  }
+  if (stats.binary === true) {
+    entry.binary = true
   }
   if (stats.added !== undefined) {
     entry.added = stats.added

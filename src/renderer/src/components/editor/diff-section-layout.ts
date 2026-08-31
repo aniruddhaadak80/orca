@@ -39,13 +39,15 @@ export function getLargeDiffFallbackBodyHeight(): number {
 export function usesLargeDiffFallbackHeight(
   section: Pick<
     DiffSection,
-    'added' | 'area' | 'largeDiffRenderLimit' | 'loading' | 'loadOnDemand' | 'path' | 'removed'
+    'added' | 'binary' | 'largeDiffRenderLimit' | 'loading' | 'loadOnDemand' | 'path' | 'removed'
   >
 ): boolean {
   return (
     section.largeDiffRenderLimit?.limited === true ||
     section.loadOnDemand === true ||
-    (section.loading && shouldLoadCombinedDiffOnDemand(section))
+    // Why: `loadOnDemand === false` only ever comes from the deferring viewer, so
+    // surfaces that never defer keep their own estimate-vs-render agreement.
+    (section.loading && section.loadOnDemand === false && shouldLoadCombinedDiffOnDemand(section))
   )
 }
 
@@ -93,18 +95,16 @@ export function getDiffSectionEstimatedHeight({
   changedLineCount,
   useIntrinsicImageHeight,
   lineCounts,
-  isLargeDiffLimited = false,
-  isLoadOnDemand = false
+  isLargeDiffLimited = false
 }: DiffSectionBodyHeightInput & {
   collapsed: boolean
   isLargeDiffLimited?: boolean
-  isLoadOnDemand?: boolean
 }): number {
   if (collapsed) {
     return DIFF_SECTION_HEADER_HEIGHT
   }
 
-  if (isLargeDiffLimited || isLoadOnDemand) {
+  if (isLargeDiffLimited) {
     return DIFF_SECTION_HEADER_HEIGHT + getLargeDiffFallbackBodyHeight()
   }
 

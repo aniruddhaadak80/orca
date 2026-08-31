@@ -48,6 +48,11 @@ export type GitUncommittedEntry = {
   // as additions. Undefined for binary files and when the diff is unavailable.
   added?: number
   removed?: number
+  // Set when the missing counts are explained by binary content rather than by
+  // stats that were never computed, so consumers can tell a cheap binary row
+  // from a file that may be huge text. Older remote hosts omit it, so absence
+  // only means "unknown".
+  binary?: boolean
 }
 
 export type GitStatusEntry = GitUncommittedEntry

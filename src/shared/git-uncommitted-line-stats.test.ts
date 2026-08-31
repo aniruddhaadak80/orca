@@ -39,10 +39,11 @@ describe('parseNumstat', () => {
     expect(stats.get('src/new.ts')).toEqual({ added: 10, removed: 0 })
   })
 
-  it('treats binary "-" columns as undefined counts', () => {
+  it('treats binary "-" columns as undefined counts flagged as binary', () => {
     expect(parseNumstat('-\t-\tassets/logo.png\n').get('assets/logo.png')).toEqual({
       added: undefined,
-      removed: undefined
+      removed: undefined,
+      binary: true
     })
   })
 
@@ -108,7 +109,9 @@ describe('collectUntrackedAdditions', () => {
   it('omits counts for binary files', async () => {
     lstatMock.mockResolvedValue(mockFileStat(3))
     readFileMock.mockResolvedValue(Buffer.from([0x00, 0x01, 0x02]))
-    expect((await collectUntrackedAdditions('/repo', ['bin.dat'])).get('bin.dat')).toEqual({})
+    expect((await collectUntrackedAdditions('/repo', ['bin.dat'])).get('bin.dat')).toEqual({
+      binary: true
+    })
   })
 
   it('counts untracked symbolic links without following the target', async () => {
@@ -185,5 +188,11 @@ describe('applyLineStats', () => {
     applyLineStats(entry, { added: undefined, removed: undefined })
     applyLineStats(entry, undefined)
     expect(entry).toEqual({})
+  })
+
+  it('marks binary entries so absent counts are not read as unknown size', () => {
+    const entry: { added?: number; removed?: number; binary?: boolean } = {}
+    applyLineStats(entry, { binary: true })
+    expect(entry).toEqual({ binary: true })
   })
 })

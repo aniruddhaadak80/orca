@@ -10,6 +10,9 @@ export type GitBranchChangeEntry = {
   oldPath?: string
   added?: number
   removed?: number
+  // See GitUncommittedEntry.binary: absent counts because git reported binary
+  // content, not because stats were unavailable.
+  binary?: boolean
 }
 
 export type GitBranchCompareSummary = {

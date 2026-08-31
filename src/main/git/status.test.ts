@@ -599,7 +599,7 @@ describe('getStatus', () => {
     const result = await getStatus('/repo')
 
     expect(result.entries).toEqual([
-      { path: 'assets/logo.png', status: 'modified', area: 'unstaged' }
+      { path: 'assets/logo.png', status: 'modified', area: 'unstaged', binary: true }
     ])
   })
 

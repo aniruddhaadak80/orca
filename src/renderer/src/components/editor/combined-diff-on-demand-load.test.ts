@@ -23,18 +23,20 @@ describe('combined diff on-demand loading', () => {
     ).toBe(false)
   })
 
-  it('automatically loads tracked diffs when line counts are unavailable', () => {
-    expect(
-      shouldLoadCombinedDiffOnDemand({ added: undefined, removed: undefined, area: 'unstaged' })
-    ).toBe(false)
+  it('defers any file whose line counts were skipped as too large', () => {
+    expect(shouldLoadCombinedDiffOnDemand({ path: 'data/dump.json' })).toBe(true)
   })
 
-  it('defers untracked files whose line counts were skipped as too large', () => {
-    expect(shouldLoadCombinedDiffOnDemand({ area: 'untracked', path: 'data/dump.json' })).toBe(true)
+  it('automatically loads binary files that report no line counts', () => {
+    expect(shouldLoadCombinedDiffOnDemand({ binary: true, path: 'docs/spec.pdf' })).toBe(false)
   })
 
-  it('automatically loads untracked images that report no line counts', () => {
-    expect(shouldLoadCombinedDiffOnDemand({ area: 'untracked', path: 'docs/Shot.PNG' })).toBe(false)
+  it('automatically loads images that report no line counts', () => {
+    expect(shouldLoadCombinedDiffOnDemand({ path: 'docs/Shot.PNG' })).toBe(false)
+  })
+
+  it('defers uncounted SVGs, which git reports as text and Monaco renders', () => {
+    expect(shouldLoadCombinedDiffOnDemand({ path: 'assets/map.svg' })).toBe(true)
   })
 
   it('defers untracked diffs when only additions are reported', () => {

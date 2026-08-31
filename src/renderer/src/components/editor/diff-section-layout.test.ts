@@ -24,20 +24,6 @@ describe('diff section layout', () => {
     expect(getLargeDiffFallbackBodyHeight()).toBe(160)
   })
 
-  it('uses the bounded fallback height for an on-demand diff', () => {
-    expect(
-      getDiffSectionEstimatedHeight({
-        collapsed: false,
-        measuredContentHeight: undefined,
-        originalContent: '',
-        modifiedContent: '',
-        changedLineCount: 60_000,
-        useIntrinsicImageHeight: false,
-        isLoadOnDemand: true
-      })
-    ).toBe(188)
-  })
-
   it('falls back to line-count height before Monaco has mounted', () => {
     expect(
       getDiffSectionBodyHeight({
@@ -243,6 +229,18 @@ describe('diff section layout', () => {
     )
     expect(
       usesLargeDiffFallbackHeight({ ...section, added: 3, loading: true, loadOnDemand: false })
+    ).toBe(false)
+  })
+
+  it('leaves viewers that never defer on their own loading height', () => {
+    expect(
+      usesLargeDiffFallbackHeight({
+        path: 'big.txt',
+        added: 50_000,
+        removed: 0,
+        largeDiffRenderLimit: null,
+        loading: true
+      })
     ).toBe(false)
   })
 
