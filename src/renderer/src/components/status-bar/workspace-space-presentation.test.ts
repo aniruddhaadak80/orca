@@ -19,11 +19,11 @@ import {
   resolveWorkspaceSpaceTreemapZoomWorktreeId,
   sortWorkspaceSpaceRows
 } from './workspace-space-presentation'
+import { getWorkspaceDecisionDetails } from './WorkspaceSpaceManagerPanel'
 import {
-  getWorkspaceDecisionDetails,
   getWorkspaceSpaceDeleteState,
   getWorkspaceSpaceGitStatusForScan
-} from './WorkspaceSpaceManagerPanel'
+} from './workspace-space-state-resolution'
 import type { AgentStatusEntry } from '../../../../shared/agent-status-types'
 import type { Repo } from '../../../../shared/repo-types'
 import type { Worktree } from '../../../../shared/worktree/types'
