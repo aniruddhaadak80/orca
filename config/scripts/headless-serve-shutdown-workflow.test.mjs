@@ -62,7 +62,7 @@ describe('headless serve shutdown PR gate', () => {
       (step) => step.name === 'Verify AppImage CLI registration and serve signal shutdown'
     )
 
-    expect(workflow.jobs.package['timeout-minutes']).toBe(60)
+    expect(workflow.jobs.package['timeout-minutes']).toBe(90)
     expect(packageStep.run).toContain('--linux AppImage deb rpm --x64 --publish never')
     expect(markerStep.run).toContain('dpkg-deb --fsys-tarfile')
     expect(markerStep.run).toContain('rpm2cpio')
