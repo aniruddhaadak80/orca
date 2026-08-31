@@ -17,6 +17,7 @@ import {
   assertPtySourceSpan
 } from '../shared/pty-source-credit-validation'
 import { chargedPtyRetainedStringBytes } from '../shared/pty-retained-string-memory'
+import { PtySourceSentBoundaries } from './pty-source-sent-boundaries'
 
 export const DEFAULT_RETAINED_SOURCE_SU = 512 * 1024
 export const DEFAULT_AGGREGATE_RETAINED_SOURCE_SU = 48 * 1024 * 1024
@@ -42,7 +43,7 @@ export type DeliveryRecord = {
   creditedEndSu: number
   retainedDataBytes: number
   spans: PtySourceSpan[]
-  sentBoundaries: Set<number>
+  sentBoundaries: PtySourceSentBoundaries
   pendingSend: PtySourceSendReservation | null
   reservedAckEndSu: number | null
   attemptedEndSu: number | null
@@ -68,7 +69,7 @@ export function createDeliveryRecord(
     creditedEndSu: checkpointSourceEndSu,
     retainedDataBytes: 0,
     spans: [],
-    sentBoundaries: new Set([checkpointSourceEndSu]),
+    sentBoundaries: new PtySourceSentBoundaries(checkpointSourceEndSu),
     pendingSend: null,
     reservedAckEndSu: null,
     attemptedEndSu: null,
