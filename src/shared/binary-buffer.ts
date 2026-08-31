@@ -1,5 +1,5 @@
 // A NUL byte in the first chunk is git's own heuristic for "this is binary".
-const BINARY_SNIFF_BYTES = 8192
+export const BINARY_SNIFF_BYTES = 8192
 
 export function isBinaryBuffer(buffer: Buffer): boolean {
   const len = Math.min(buffer.length, BINARY_SNIFF_BYTES)

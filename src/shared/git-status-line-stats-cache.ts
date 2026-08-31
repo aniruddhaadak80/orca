@@ -29,12 +29,16 @@ type GitStatusLineStatsEntry = {
   }
   added?: number
   removed?: number
+  binary?: boolean
 }
 
 type CachedLineStats = {
   identity: string
   storedAt: number
-  stats: { added?: number; removed?: number }[]
+  // `binary` rides along with the counts: it is the marker that says "absent
+  // counts are cheap binary content", so dropping it on reuse would defer every
+  // non-image binary behind the large-diff prompt.
+  stats: { added?: number; removed?: number; binary?: boolean }[]
   // Why: the branch total is derived from the same tree snapshot as the entry
   // stats, so it must share their reuse lifecycle — a poll that reuses line
   // stats must reuse the total rather than re-running the ranged diff.
@@ -113,6 +117,9 @@ export function applyCachedGitStatusLineStats(input: {
     if (stats?.removed !== undefined) {
       entry.removed = stats.removed
     }
+    if (stats?.binary === true) {
+      entry.binary = true
+    }
   })
   return true
 }
@@ -180,7 +187,8 @@ export function storeGitStatusLineStats(input: {
     storedAt: now,
     stats: input.entries.map((entry) => ({
       ...(entry.added === undefined ? {} : { added: entry.added }),
-      ...(entry.removed === undefined ? {} : { removed: entry.removed })
+      ...(entry.removed === undefined ? {} : { removed: entry.removed }),
+      ...(entry.binary === true ? { binary: true } : {})
     })),
     ...(branchLineTotal === undefined ? {} : { branchLineTotal })
   })

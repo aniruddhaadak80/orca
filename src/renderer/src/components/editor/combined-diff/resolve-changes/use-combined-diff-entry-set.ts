@@ -131,7 +131,11 @@ export function useCombinedDiffEntrySet({
           oldPath: entry.oldPath ?? null,
           area: 'area' in entry ? entry.area : null,
           added: 'added' in entry ? (entry.added ?? null) : null,
-          removed: 'removed' in entry ? (entry.removed ?? null) : null
+          removed: 'removed' in entry ? (entry.removed ?? null) : null,
+          // Why: with counts absent, `binary` is the only input that decides
+          // deferred vs. auto-loaded, so a refresh that only corrects it has to
+          // change the signature or the wrongly-deferred row never rebuilds.
+          binary: 'binary' in entry ? (entry.binary ?? null) : null
         }))
       }),
     [

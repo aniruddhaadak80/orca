@@ -603,6 +603,63 @@ describe('getStatus', () => {
     ])
   })
 
+  it('keeps the binary marker when a safety poll reuses cached line stats', async () => {
+    readFileMock.mockResolvedValue('gitdir: /repo/.git/worktrees/feature\n')
+    gitExecFileAsyncMock.mockImplementation((args: string[]) => {
+      if (args.includes('status')) {
+        return Promise.resolve({
+          stdout:
+            '# branch.oid head-binary\n' +
+            '1 .M N... 100644 100644 100644 cccc cccc assets/doc.pdf\n'
+        })
+      }
+      if (args.includes('--numstat')) {
+        return Promise.resolve({ stdout: '-\t-\tassets/doc.pdf\n' })
+      }
+      return Promise.resolve({ stdout: '' })
+    })
+
+    const fresh = await getStatus('/repo')
+    const reused = await getStatus('/repo', { reuseLineStats: true })
+
+    // Why pinned: losing `binary` across reuse re-deferred every binary row
+    // behind the "Large diffs are not rendered by default" prompt.
+    expect(fresh.entries).toEqual([
+      { path: 'assets/doc.pdf', status: 'modified', area: 'unstaged', binary: true }
+    ])
+    expect(reused.entries).toEqual(fresh.entries)
+    expect(
+      gitExecFileAsyncMock.mock.calls.filter(([args]) => args.includes('--numstat'))
+    ).toHaveLength(1)
+  })
+
+  it('leaves every row uncounted when the numstat pass fails', async () => {
+    readFileMock.mockResolvedValue('gitdir: /repo/.git/worktrees/feature\n')
+    gitExecFileAsyncMock.mockImplementation((args: string[]) => {
+      if (args.includes('status')) {
+        return Promise.resolve({
+          stdout:
+            '# branch.oid head-fanout\n' +
+            '1 .M N... 100644 100644 100644 aaaa aaaa src/a.ts\n' +
+            '1 .M N... 100644 100644 100644 bbbb bbbb assets/doc.pdf\n'
+        })
+      }
+      if (args.includes('--numstat')) {
+        return Promise.reject(new Error('transient index.lock'))
+      }
+      return Promise.resolve({ stdout: '' })
+    })
+
+    const result = await getStatus('/repo')
+
+    // Intentional fan-out: no counts and no marker, so the combined diff view
+    // defers every row rather than streaming an unknown-size file into Monaco.
+    expect(result.entries).toEqual([
+      { path: 'src/a.ts', status: 'modified', area: 'unstaged' },
+      { path: 'assets/doc.pdf', status: 'modified', area: 'unstaged' }
+    ])
+  })
+
   it('skips numstat entirely for a clean working tree', async () => {
     readFileMock.mockResolvedValue('gitdir: /repo/.git/worktrees/feature\n')
     gitExecFileAsyncMock.mockResolvedValueOnce({ stdout: '' })

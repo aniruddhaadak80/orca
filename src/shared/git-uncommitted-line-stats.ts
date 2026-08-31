@@ -1,6 +1,6 @@
-import { lstat } from 'node:fs/promises'
+import { lstat, open } from 'node:fs/promises'
 import * as path from 'node:path'
-import { isBinaryBuffer } from './binary-buffer'
+import { BINARY_SNIFF_BYTES, isBinaryBuffer } from './binary-buffer'
 import { decodeGitCQuotedPath } from './git-cquoted-path'
 import { DEFAULT_GIT_STATUS_LIMIT } from './git-status-limit'
 import { iterateNulDelimitedFields } from './nul-delimited-fields'
@@ -130,8 +130,15 @@ async function countFileAdditions(absolutePath: string): Promise<GitLineStats> {
     if (fileStat.isSymbolicLink()) {
       return rememberUntrackedStats(absolutePath, fileStat, { added: 1 })
     }
-    if (!fileStat.isFile() || fileStat.size > MAX_UNTRACKED_LINE_COUNT_BYTES) {
+    if (!fileStat.isFile()) {
       return rememberUntrackedStats(absolutePath, fileStat, {})
+    }
+    if (fileStat.size > MAX_UNTRACKED_LINE_COUNT_BYTES) {
+      // Why: sniffing the header costs one 8 KB read, and without it a large
+      // untracked binary looks identical to a large untracked text file and
+      // lands behind the deferred-diff prompt instead of showing its preview.
+      const binary = await isBinaryFileHeader(absolutePath)
+      return rememberUntrackedStats(absolutePath, fileStat, binary ? { binary: true } : {})
     }
     const { buffer } = await readNodeFileWithinLimit(absolutePath, MAX_UNTRACKED_LINE_COUNT_BYTES)
     if (isBinaryBuffer(buffer)) {
@@ -154,6 +161,17 @@ async function countFileAdditions(absolutePath: string): Promise<GitLineStats> {
     })
   } catch {
     return {}
+  }
+}
+
+async function isBinaryFileHeader(absolutePath: string): Promise<boolean> {
+  const handle = await open(absolutePath, 'r')
+  try {
+    const buffer = Buffer.allocUnsafe(BINARY_SNIFF_BYTES)
+    const { bytesRead } = await handle.read(buffer, 0, BINARY_SNIFF_BYTES, 0)
+    return isBinaryBuffer(buffer.subarray(0, bytesRead))
+  } finally {
+    await handle.close()
   }
 }
 

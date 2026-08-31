@@ -6,7 +6,7 @@ import { gitReadOptionsForWorktree } from '../git-runtime-options'
 import { gitExecFileAsyncBuffer } from '../runner'
 import { isMaxBufferOverflowError } from '../max-buffer-overflow'
 import { MAX_GIT_SHOW_BYTES } from './git-show-max-bytes'
-import { PREVIEWABLE_BINARY_MIME_TYPES } from './previewable-binary-mime-types'
+import { PREVIEWABLE_BINARY_MIME_TYPES } from '../../../shared/previewable-binary-mime-types'
 
 export type GitBlobReadResult = {
   content: string

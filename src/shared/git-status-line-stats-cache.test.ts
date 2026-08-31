@@ -46,6 +46,23 @@ describe('git status line stats cache', () => {
     ).toBe(false)
   })
 
+  it('restores the binary marker so a reused snapshot cannot re-defer a binary diff', () => {
+    const storedEntries = [
+      { path: 'assets/doc.pdf', status: 'modified', area: 'unstaged', binary: true }
+    ]
+    storeGitStatusLineStats({ cacheKey: 'native\0/repo', head: 'head-1', entries: storedEntries })
+    const matchingEntries = [{ path: 'assets/doc.pdf', status: 'modified', area: 'unstaged' }]
+
+    expect(
+      applyCachedGitStatusLineStats({
+        cacheKey: 'native\0/repo',
+        head: 'head-1',
+        entries: matchingEntries
+      })
+    ).toBe(true)
+    expect(matchingEntries).toEqual(storedEntries)
+  })
+
   it('invalidates a matching status identity at the bounded age', () => {
     storeGitStatusLineStats({
       cacheKey: 'native\0/repo',

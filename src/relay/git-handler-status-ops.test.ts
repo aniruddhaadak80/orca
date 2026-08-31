@@ -209,6 +209,33 @@ describe('getStatusOp', () => {
     expect(git.mock.calls.filter(([args]) => args.includes('diff'))).toHaveLength(2)
   })
 
+  it('keeps the binary marker when a hinted safety read reuses line stats', async () => {
+    const statusOutput = `${buildBranchStatusOutput('head-binary', '(detached)')}\n1 .M N... 100644 100644 100644 cccc cccc assets/doc.pdf`
+    const git = vi.fn<GitExec>(async (args) => {
+      if (args.includes('status')) {
+        return { stdout: statusOutput, stderr: '' }
+      }
+      if (args.includes('diff')) {
+        return { stdout: '-\t-\tassets/doc.pdf\n', stderr: '' }
+      }
+      throw new Error(`Unexpected git command: ${args.join(' ')}`)
+    })
+
+    const fresh = await getStatusOp(git, streamGitFromCapture(git), { worktreePath: tmpDir })
+    const reused = await getStatusOp(git, streamGitFromCapture(git), {
+      worktreePath: tmpDir,
+      reuseLineStats: true
+    })
+
+    // Why pinned: the relay shares the reuse cache, so dropping `binary` here
+    // re-defers every binary row in a remote worktree's diff view.
+    expect(fresh.entries).toContainEqual(
+      expect.objectContaining({ path: 'assets/doc.pdf', binary: true })
+    )
+    expect(reused.entries).toEqual(fresh.entries)
+    expect(git.mock.calls.filter(([args]) => args.includes('diff'))).toHaveLength(1)
+  })
+
   it('omits line stats without overwriting the reusable line-stats cache', async () => {
     const statusOutput = `${buildBranchStatusOutput('head-skip', '(detached)')}\n1 .M N... 100644 100644 100644 aaaa aaaa src/a.ts`
     const git = vi.fn<GitExec>(async (args) => {

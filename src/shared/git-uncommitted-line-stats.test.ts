@@ -1,11 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-const { lstatMock, readFileMock } = vi.hoisted(() => ({
+const { lstatMock, openMock, readFileMock } = vi.hoisted(() => ({
   lstatMock: vi.fn(),
+  openMock: vi.fn(),
   readFileMock: vi.fn()
 }))
 
-vi.mock('fs/promises', () => ({ lstat: lstatMock }))
+vi.mock('fs/promises', () => ({ lstat: lstatMock, open: openMock }))
 
 vi.mock('./node-bounded-file-reader', () => ({
   readNodeFileWithinLimit: async (path: string) => ({
@@ -21,6 +22,16 @@ import {
   parseNumstat
 } from './git-uncommitted-line-stats'
 import { DEFAULT_GIT_STATUS_LIMIT } from './git-status-limit'
+
+// Serves the oversized-file header sniff: reads at most `header`'s bytes.
+function mockFileHandle(header: Buffer) {
+  return {
+    read: async (buffer: Buffer, offset: number, length: number, position: number) => ({
+      bytesRead: header.copy(buffer, offset, position, Math.min(header.length, position + length))
+    }),
+    close: async () => {}
+  }
+}
 
 function mockFileStat(size: number, mtimeMs = 1) {
   return {
@@ -81,6 +92,7 @@ describe('parseNumstat', () => {
 describe('collectUntrackedAdditions', () => {
   beforeEach(() => {
     lstatMock.mockReset()
+    openMock.mockReset()
     readFileMock.mockReset()
   })
 
@@ -131,8 +143,21 @@ describe('collectUntrackedAdditions', () => {
 
   it('skips oversized untracked files instead of reading them during status polling', async () => {
     lstatMock.mockResolvedValue(mockFileStat(MAX_UNTRACKED_LINE_COUNT_BYTES + 1, 3))
+    openMock.mockResolvedValue(mockFileHandle(Buffer.from('plain text header')))
 
     expect((await collectUntrackedAdditions('/repo', ['large.log'])).get('large.log')).toEqual({})
+    expect(readFileMock).not.toHaveBeenCalled()
+  })
+
+  it('marks oversized untracked binaries from the header sniff alone', async () => {
+    lstatMock.mockResolvedValue(mockFileStat(MAX_UNTRACKED_LINE_COUNT_BYTES + 1, 5))
+    openMock.mockResolvedValue(mockFileHandle(Buffer.from([0x25, 0x50, 0x44, 0x46, 0x00, 0x01])))
+
+    // Why pinned: without the sniff a >2 MB .pdf has neither counts nor marker,
+    // so it lands behind the deferred-diff prompt instead of its preview.
+    expect(
+      (await collectUntrackedAdditions('/repo', ['docs/big.pdf'])).get('docs/big.pdf')
+    ).toEqual({ binary: true })
     expect(readFileMock).not.toHaveBeenCalled()
   })
 

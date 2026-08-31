@@ -39,6 +39,40 @@ describe('combined diff on-demand loading', () => {
     expect(shouldLoadCombinedDiffOnDemand({ path: 'assets/map.svg' })).toBe(true)
   })
 
+  it('automatically loads uncounted PDFs, which have a real preview', () => {
+    expect(shouldLoadCombinedDiffOnDemand({ path: 'docs/spec.PDF' })).toBe(false)
+  })
+
+  it('defers every row when the numstat pass failed and left the scan uncounted', () => {
+    // A failed numstat drops counts for a whole area at once. Rows with a real
+    // preview still load; everything else degrades to the click-to-load prompt.
+    const uncountedRows = [
+      { path: 'src/app.ts' },
+      { path: 'assets/logo.png' },
+      { path: 'docs/spec.pdf' },
+      { path: 'fonts/inter.woff2' },
+      { path: 'archive.zip' }
+    ]
+
+    expect(uncountedRows.map((row) => shouldLoadCombinedDiffOnDemand(row))).toEqual([
+      true,
+      false,
+      false,
+      true,
+      true
+    ])
+  })
+
+  it('degrades gracefully when an older remote host omits the binary marker', () => {
+    // Wire compatibility: an old relay simply leaves `binary` off the entry, so
+    // the row must defer rather than throw or auto-load an unknown-size file.
+    const legacyEntry = JSON.parse('{"path":"fonts/inter.woff2","status":"modified"}') as {
+      path: string
+    }
+
+    expect(shouldLoadCombinedDiffOnDemand(legacyEntry)).toBe(true)
+  })
+
   it('defers untracked diffs when only additions are reported', () => {
     expect(shouldLoadCombinedDiffOnDemand({ added: MAX_AUTOMATIC_DIFF_CHANGED_LINES + 1 })).toBe(
       true
